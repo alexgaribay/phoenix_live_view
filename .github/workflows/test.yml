@@ -1,0 +1,52 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  mix_deps:
+    name: Fetch Elixir Deps
+    runs-on: ubuntu-latest
+    container:
+      image: elixir:1.9.1-slim
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Dependencies
+      run: |
+        mix local.rebar --force
+        mix local.hex --force
+        mix deps.get
+    - name: Upload Dependencies
+      uses: actions/upload-artifact@v1
+      with:
+        name: deps
+        path: deps
+        
+  mix_test:
+    name: Elixir Test
+    needs: mix_deps
+    runs-on: ubuntu-latest
+    container:
+      image: elixir:1.9.1-slim
+    steps:
+    - uses: actions/checkout@v1
+    - name: Pull Dependencies
+      uses: actions/download-artifact@v1
+      with:
+        name: deps
+    - name: Run Tests
+      run: mix test
+      
+  npm_test:
+    name: Javascript Test
+    needs: mix_deps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - name: npm install and test
+        run: |
+          cd assets
+          npm install
+          npm test      
